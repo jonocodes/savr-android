@@ -10,7 +10,7 @@ import com.digitus.savr.data.AppContainerImpl
 
 class SavrApplication : Application() {
     companion object {
-        const val APP_URI = "https://developer.android.com/jetnews"
+        const val APP_URI = "https://github.com/jonocodes/savr-android"
         var appDataDir: DocumentFile? = null
         var appSavesDir: DocumentFile? = null
         var jsonDbFile: DocumentFile? = null
