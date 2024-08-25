@@ -1,0 +1,776 @@
+
+package com.digitus.savr.ui.home
+
+import android.content.Context
+import android.content.Intent
+import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import android.util.Log
+import android.view.View.INVISIBLE
+import android.view.ViewGroup
+import android.webkit.ValueCallback
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.paddingFromBaseline
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.PermMedia
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.TopAppBarState
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat.startActivity
+import com.digitus.savr.R
+import com.digitus.savr.data.JsonDb
+import com.digitus.savr.data.Result
+import com.digitus.savr.data.articles.impl.BlockingFakeArticlesRepository
+import com.digitus.savr.data.articles.impl.article1
+import com.digitus.savr.model.Article
+import com.digitus.savr.model.ArticlesFeed
+import com.digitus.savr.model.ReadabilityResult
+import com.digitus.savr.ui.PrefsActivity
+import com.digitus.savr.ui.components.SavrSnackbarHost
+import com.digitus.savr.ui.modifiers.interceptKey
+import com.digitus.savr.ui.theme.SavrTheme
+import com.digitus.savr.ui.utils.JS_SCRIPT_READABILITY
+import com.digitus.savr.ui.utils.LOGTAG
+import com.digitus.savr.ui.utils.createFileText
+import com.digitus.savr.ui.utils.formatHtml
+import com.digitus.savr.ui.utils.readFromAsset
+import com.digitus.savr.ui.utils.readabilityToArticle
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.runBlocking
+
+
+/**
+ * A [Modifier] that tracks all input, and calls [block] every time input is received.
+ */
+private fun Modifier.notifyInput(block: () -> Unit): Modifier =
+    composed {
+        val blockState = rememberUpdatedState(block)
+        pointerInput(Unit) {
+            while (currentCoroutineContext().isActive) {
+                awaitPointerEventScope {
+                    awaitPointerEvent(PointerEventPass.Initial)
+                    blockState.value()
+                }
+            }
+        }
+    }
+
+/**
+ * The home screen displaying just the article feed.
+ */
+@Composable
+fun HomeFeedScreen(
+    uiState: HomeUiState,
+    showTopAppBar: Boolean,
+    onToggleFavorite: (String) -> Unit,
+    onSelectPost: (String) -> Unit,
+    onRefreshPosts: () -> Unit,
+    onErrorDismiss: (Long) -> Unit,
+    homeListLazyListState: LazyListState,
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+    searchInput: String = "",
+    onSearchInputChanged: (String) -> Unit,
+) {
+    HomeScreenWithList(
+        uiState = uiState,
+        showTopAppBar = showTopAppBar,
+        onRefreshPosts = onRefreshPosts,
+        onErrorDismiss = onErrorDismiss,
+        snackbarHostState = snackbarHostState,
+        modifier = modifier
+    ) { hasPostsUiState, contentPadding, contentModifier ->
+        ArticleList(
+            favorites = hasPostsUiState.favorites,
+            showExpandedSearch = !showTopAppBar,
+            onArticleTapped = onSelectPost,
+            onToggleFavorite = onToggleFavorite,
+            contentPadding = contentPadding,
+            modifier = contentModifier,
+            state = homeListLazyListState,
+            searchInput = searchInput,
+            onSearchInputChanged = onSearchInputChanged,
+            articlesFeed = hasPostsUiState.articlesFeed,
+        )
+    }
+}
+
+/**
+ * A display of the home screen that has the list.
+ *
+ * This sets up the scaffold with the top app bar, and surrounds the [hasPostsContent] with refresh,
+ * loading and error handling.
+ *
+ * This helper functions exists because [HomeFeedWithArticleDetailsScreen] and [HomeFeedScreen] are
+ * extremely similar, except for the rendered content when there are posts to display.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeScreenWithList(
+    uiState: HomeUiState,
+    showTopAppBar: Boolean,
+    onRefreshPosts: () -> Unit,
+    onErrorDismiss: (Long) -> Unit,
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+    hasPostsContent: @Composable (
+        uiState: HomeUiState.HasPosts,
+        contentPadding: PaddingValues,
+        modifier: Modifier
+    ) -> Unit
+) {
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
+    Scaffold(
+        snackbarHost = { SavrSnackbarHost(hostState = snackbarHostState) },
+        topBar = {
+            if (showTopAppBar) {
+                HomeTopAppBar(
+                    topAppBarState = topAppBarState
+                )
+            }
+        },
+        modifier = modifier
+    ) { innerPadding ->
+        val contentModifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+
+        LoadingContent(
+            empty = when (uiState) {
+                is HomeUiState.HasPosts -> false
+                is HomeUiState.NoPosts -> uiState.isLoading
+            },
+            emptyContent = { FullScreenLoading() },
+            loading = uiState.isLoading,
+            onRefresh = onRefreshPosts,
+            content = {
+                when (uiState) {
+                    is HomeUiState.HasPosts ->
+                        hasPostsContent(uiState, innerPadding, contentModifier)
+                    is HomeUiState.NoPosts -> {
+                        if (uiState.errorMessages.isEmpty()) {
+                            // if there are no posts, and no error, let the user refresh manually
+                            TextButton(
+                                onClick = onRefreshPosts,
+                                modifier
+                                    .padding(innerPadding)
+                                    .fillMaxSize()
+                            ) {
+                                Text(
+                                    stringResource(id = R.string.home_tap_to_load_content),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        } else {
+                            // there's currently an error showing, don't show any content
+                            Box(
+                                contentModifier
+                                    .padding(innerPadding)
+                                    .fillMaxSize()
+                            ) { /* empty screen */ }
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    // Process one error message at a time and show them as Snackbars in the UI
+    if (uiState.errorMessages.isNotEmpty()) {
+        // Remember the errorMessage to display on the screen
+        val errorMessage = remember(uiState) { uiState.errorMessages[0] }
+
+        // Get the text to show on the message from resources
+        val errorMessageText: String = stringResource(errorMessage.messageId)
+        val retryMessageText = stringResource(id = R.string.retry)
+
+        // If onRefreshPosts or onErrorDismiss change while the LaunchedEffect is running,
+        // don't restart the effect and use the latest lambda values.
+        val onRefreshPostsState by rememberUpdatedState(onRefreshPosts)
+        val onErrorDismissState by rememberUpdatedState(onErrorDismiss)
+
+        // Effect running in a coroutine that displays the Snackbar on the screen
+        // If there's a change to errorMessageText, retryMessageText or snackbarHostState,
+        // the previous effect will be cancelled and a new one will start with the new values
+        LaunchedEffect(errorMessageText, retryMessageText, snackbarHostState) {
+            val snackbarResult = snackbarHostState.showSnackbar(
+                message = errorMessageText,
+                actionLabel = retryMessageText
+            )
+            if (snackbarResult == SnackbarResult.ActionPerformed) {
+                onRefreshPostsState()
+            }
+            // Once the message is displayed and dismissed, notify the ViewModel
+            onErrorDismissState(errorMessage.id)
+        }
+    }
+}
+
+/**
+ * Display an initial empty state or swipe to refresh content.
+ *
+ * @param empty (state) when true, display [emptyContent]
+ * @param emptyContent (slot) the content to display for the empty state
+ * @param loading (state) when true, display a loading spinner over [content]
+ * @param onRefresh (event) event to request refresh
+ * @param content (slot) the main content to show
+ */
+@Composable
+private fun LoadingContent(
+    empty: Boolean,
+    emptyContent: @Composable () -> Unit,
+    loading: Boolean,
+    onRefresh: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    if (empty) {
+        emptyContent()
+    } else {
+        SwipeRefresh(
+            state = rememberSwipeRefreshState(loading),
+            onRefresh = onRefresh,
+            content = content,
+        )
+    }
+}
+
+/**
+ * Display a feed of posts.
+ *
+ * When a post is clicked on, [onArticleTapped] will be called.
+ *
+ * @param postsFeed (state) the feed to display
+ * @param onArticleTapped (event) request navigation to Article screen
+ * @param modifier modifier for the root element
+ */
+@Composable
+private fun ArticleList(
+    favorites: Set<String>,
+    showExpandedSearch: Boolean,
+    onArticleTapped: (postId: String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    state: LazyListState = rememberLazyListState(),
+    searchInput: String = "",
+    onSearchInputChanged: (String) -> Unit,
+    articlesFeed: ArticlesFeed,
+) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = contentPadding,
+        state = state
+    ) {
+        if (showExpandedSearch) {
+            item {
+                HomeSearch(
+                    Modifier.padding(horizontal = 16.dp),
+                    searchInput = searchInput,
+                    onSearchInputChanged = onSearchInputChanged,
+                )
+            }
+        }
+//        item { PostListTopSection(postsFeed.highlightedPost, onArticleTapped) }
+
+        if (articlesFeed.saved.isNotEmpty()) {
+            item {
+                ArticleListSimpleSection(articles = articlesFeed.saved,
+                    navigateToArticle = onArticleTapped, favorites = setOf(),
+                    onToggleFavorite = {}
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Full screen circular progress indicator
+ */
+@Composable
+private fun FullScreenLoading() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize(Alignment.Center)
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ArticleListSimpleSection(
+    articles: List<Article>,
+    navigateToArticle: (String) -> Unit,
+    favorites: Set<String>,
+    onToggleFavorite: (String) -> Unit
+) {
+    Column {
+        articles.forEach { article ->
+            ArticleCardSimple(article = article,
+                navigateToArticle = navigateToArticle)
+
+            Divider(
+                modifier = Modifier.padding(horizontal = 14.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+            )
+        }
+    }
+}
+
+/**
+ * Expanded search UI - includes support for enter-to-send on the search field
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@Composable
+private fun HomeSearch(
+    modifier: Modifier = Modifier,
+    searchInput: String = "",
+    onSearchInputChanged: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    OutlinedTextField(
+        value = searchInput,
+        onValueChange = onSearchInputChanged,
+        placeholder = { Text(stringResource(R.string.home_search)) },
+        leadingIcon = { Icon(Icons.Filled.Search, null) },
+        modifier = modifier
+            .fillMaxWidth()
+            .interceptKey(Key.Enter) {
+                // submit a search query when Enter is pressed
+                submitSearch(onSearchInputChanged, context)
+                keyboardController?.hide()
+                focusManager.clearFocus(force = true)
+            },
+        singleLine = true,
+        // keyboardOptions change the newline key to a search key on the soft keyboard
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        // keyboardActions submits the search query when the search key is pressed
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                submitSearch(onSearchInputChanged, context)
+                keyboardController?.hide()
+            }
+        )
+    )
+}
+
+/**
+ * Stub helper function to submit a user's search query
+ */
+private fun submitSearch(
+    onSearchInputChanged: (String) -> Unit,
+    context: Context
+) {
+    onSearchInputChanged("")
+
+    Toast.makeText(
+        context,
+        "Search is not yet implemented",
+        Toast.LENGTH_SHORT
+    ).show()
+}
+
+
+@Composable
+fun ScraperWebView(url: String? = null) {
+
+    val context = LocalContext.current
+
+    val webViewClient1 = object : WebViewClient() {
+
+//        public void postVisualStateCallback
+
+        override fun onPageFinished(view: WebView, url: String) {
+
+            Log.i(LOGTAG, "onPageFinished")
+
+//            READABILITY
+
+            view.evaluateJavascript(readFromAsset(context, "Readability.js"), null)
+
+            view.evaluateJavascript(JS_SCRIPT_READABILITY, ValueCallback<String?> { result ->
+                run {
+
+                    if (result == null || result == "null") {
+                        Log.e(LOGTAG, "null readability result")
+                    } else {
+
+                        Log.d("callback_result", result)
+
+                        val readabilityResult: ReadabilityResult =
+                            Gson().fromJson(result, ReadabilityResult::class.java)
+
+                        val article = readabilityToArticle(readabilityResult, url)
+
+                        createFileText(
+                            context,
+                            "readability.json",
+                            GsonBuilder().setPrettyPrinting().create().toJson(readabilityResult),
+                            article.slug
+                        )
+                        createFileText(context, "readability.html", readabilityResult.content!!, article.slug)
+
+                        val html = formatHtml(article, article.html)
+
+                        article.html = "(saved in readability.html)"
+                        JsonDb(context).addArticle(article)
+
+                        createFileText(context, "index.html", html, article.slug)
+                    }
+                }
+            })
+
+
+////          POSTLIGHT
+//
+//            view.evaluateJavascript(readFromAsset(context, "mercury.web.js"), null)
+//
+//            view.evaluateJavascript("""
+//
+//                // TODO: cant get this to work. try to recompile this so Parser is exported instead of Mercury
+//
+//                    function parse(url, html) {
+//                      return new Promise(resolve => {
+//                          return Mercury.parse(url, {
+//                            html
+//                            }).then(resolve);
+//                      });
+//                    }
+//
+//
+//    let url = "https://asdaasda.com/coolarticle.html";
+//
+//    console.log(url)
+//
+////        let content = await parse(document.URL, document.documentElement.outerHTML)
+//
+////                     document.URL
+////                     document.documentElement.outerHTML
+//
+//
+//                            """.trimIndent(), ValueCallback<String?> { result ->
+//                run {
+//
+//                    if (result == null || result == "null") {
+//                        Log.e(LOGTAG, "null postlight result")
+//                    } else {
+//
+//                        Log.d("callback_result", result)
+//
+//                        val jsonElement: JsonElement = Json.parseToJsonElement(result)
+//
+//                        val content =
+//                            StringEscapeUtils.unescapeJava(jsonElement.jsonObject["content"].toString())
+//                                .trim('"')
+//
+//                        val title = jsonElement.jsonObject["title"].toString().trim('"')
+//
+//                        Log.i(LOGTAG, content)
+//
+//                        val slug = toUrlSlug(title)
+//
+//                        val gson = GsonBuilder().setPrettyPrinting().create()
+//                        val prettyJsonString = gson.toJson(jsonElement)
+//
+//                        createFileText(context, "postlight.json", prettyJsonString, slug)
+//
+//                        createFileText(context, "postlight.html", content, slug)
+//
+////                        val html = formatHtml(content, title, "date goes here", "Elvis")
+//
+//                    }
+//                }
+//            })
+
+        }
+    }
+
+    val view1 = WebView(context).apply {
+        layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        webViewClient = webViewClient1
+
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+//        addJavascriptInterface(AndroidJSInterface, "Android")
+    }
+
+    view1.visibility = INVISIBLE
+
+    Log.i(LOGTAG, "created webview for $url")
+
+    if (url != null) {
+        view1.loadUrl(url)
+    }
+}
+
+
+@Composable
+fun AddArticleDialog(onDismissRequest: () -> Unit) {
+
+    var urlText by rememberSaveable { mutableStateOf("https://www.apalrd.net/posts/2023/network_ipv6/") }
+
+    var processArticle by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    Dialog(onDismissRequest = { onDismissRequest() }) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+//            shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                Text(
+                    modifier = Modifier.paddingFromBaseline(50.dp),
+                    text ="Add article",
+                    style=MaterialTheme.typography.titleLarge
+                )
+
+                OutlinedTextField(
+                    modifier = Modifier.padding(20.dp),
+                    value = urlText,
+                    onValueChange = { urlText = it },
+                    label = { Text("URL") }
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    TextButton(
+                        onClick = {
+                            processArticle = true
+                        },
+                        modifier = Modifier.padding(8.dp),
+//                        border = BorderStroke(10.dp, brush)
+                    ) {
+                        Text("Save")
+                    }
+                    TextButton(
+                        onClick = { onDismissRequest() },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+
+
+                if ((urlText != "") && (processArticle)) {
+                    ScraperWebView(urlText)
+                    processArticle = false
+                }
+            }
+        }
+    }
+}
+
+/**
+ * TopAppBar for the Home screen
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeTopAppBar(
+    modifier: Modifier = Modifier,
+    topAppBarState: TopAppBarState = rememberTopAppBarState(),
+    scrollBehavior: TopAppBarScrollBehavior? =
+        TopAppBarDefaults.enterAlwaysScrollBehavior(topAppBarState)
+) {
+    val context = LocalContext.current
+//    val title = stringResource(id = R.string.app_name)
+
+    var openAddDialog by remember { mutableStateOf(false) }
+
+    TopAppBar(
+//        title = {
+//            Image(
+//                painter = painterResource(R.drawable.ic_jetnews_wordmark),
+//                contentDescription = title,
+//                contentScale = ContentScale.Inside,
+//                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+//                modifier = Modifier.fillMaxWidth()
+//            )
+//        },
+        title = {
+            Text("saves")
+        },
+        navigationIcon = { },
+        actions = {
+
+            IconButton(onClick = {
+//                Toast.makeText(
+//                    context,
+//                    "Archive view is not yet implemented",
+//                    Toast.LENGTH_LONG
+//                ).show()
+
+            }) {
+                Icon(
+                    imageVector = Icons.Filled.PermMedia,
+                    contentDescription = "Saves"
+                )
+            }
+
+            IconButton(onClick = {
+                Toast.makeText(
+                    context,
+                    "Archive view is not yet implemented",
+                    Toast.LENGTH_LONG
+                ).show()
+
+            }) {
+                Icon(
+                    imageVector = Icons.Filled.Inventory,
+//                    imageVector = Icons.Filled.Archive,
+                    contentDescription = "Archive"
+                )
+            }
+
+            IconButton(onClick = { openAddDialog = true }) {
+                Icon(
+                    imageVector = Icons.Filled.AddCircleOutline,
+                    contentDescription = "Add"
+                )
+            }
+
+            IconButton(onClick = {
+
+                val mainActivityIntent = Intent(
+                    context, PrefsActivity::class.java
+                )
+                startActivity(context, mainActivityIntent, null)
+            }) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.cd_search)
+                )
+            }
+        },
+        scrollBehavior = scrollBehavior,
+        modifier = modifier
+    )
+
+    if (openAddDialog) {
+        AddArticleDialog(
+            onDismissRequest = { openAddDialog = false },
+        )
+    }
+}
+
+@Preview("Add article dialog")
+@Composable
+fun PreviewArticleDialog() {
+    AddArticleDialog() {
+
+    }
+}
+
+
+@Preview("Home list navrail screen", device = Devices.NEXUS_7_2013)
+@Preview(
+    "Home list navrail screen (dark)",
+    uiMode = UI_MODE_NIGHT_YES,
+    device = Devices.NEXUS_7_2013
+)
+@Preview("Home list navrail screen (big font)", fontScale = 1.5f, device = Devices.NEXUS_7_2013)
+@Composable
+fun PreviewHomeListNavRailScreen() {
+    val articlesFeed = runBlocking {
+        (BlockingFakeArticlesRepository().getArticlesFeed() as Result.Success).data
+    }
+    SavrTheme {
+        HomeFeedScreen(
+            uiState = HomeUiState.HasPosts(
+                articlesFeed = articlesFeed,
+                selectedArticle = article1,
+                isArticleOpen = false,
+                favorites = emptySet(),
+                isLoading = false,
+                errorMessages = emptyList(),
+                searchInput = ""
+            ),
+            showTopAppBar = true,
+            onToggleFavorite = {},
+            onSelectPost = {},
+            onRefreshPosts = {},
+            onErrorDismiss = {},
+            homeListLazyListState = rememberLazyListState(),
+            snackbarHostState = SnackbarHostState(),
+            onSearchInputChanged = {}
+        )
+    }
+}
