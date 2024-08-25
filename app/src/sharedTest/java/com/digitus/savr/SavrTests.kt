@@ -1,6 +1,6 @@
 
 
-package com.digitus.savr
+package app.digitus.savr
 
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule

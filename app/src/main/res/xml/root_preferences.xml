@@ -37,7 +37,26 @@
         <Preference
             app:key="dataDir"
             app:title="@string/directory_title"
-            app:summary="(not set)"/>
+            app:summary="(not set)"
+            app:icon="@drawable/baseline_archive_24" />
+
+        <SwitchPreferenceCompat
+            app:key="switch"
+            app:title="arst"
+            app:summary="summary goes here"/>
+
+        <DropDownPreference
+            app:key="dropdown"
+            app:title="Theme"
+            app:entries="@array/reply_entries"
+            app:useSimpleSummaryProvider="true"
+            app:entryValues="@array/reply_values"/>
+
+<!--        <Preference-->
+<!--            app:key="fontSizeModifier"-->
+<!--            app:title="Font size modifier"-->
+<!--            app:summary="(not set)"-->
+<!--            />-->
 
     </PreferenceCategory>
 

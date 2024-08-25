@@ -1,5 +1,5 @@
 
-package com.digitus.savr
+package app.digitus.savr
 
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.SnackbarHostState
@@ -7,10 +7,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.digitus.savr.ui.home.HomeFeedScreen
-import com.digitus.savr.ui.home.HomeUiState
-import com.digitus.savr.ui.theme.SavrTheme
-import com.digitus.savr.utils.ErrorMessage
+import app.digitus.savr.ui.home.HomeFeedScreen
+import app.digitus.savr.ui.home.HomeUiState
+import app.digitus.savr.ui.theme.SavrTheme
+import app.digitus.savr.utils.ErrorMessage
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -32,23 +32,27 @@ class HomeScreenTests {
     fun postsContainError_snackbarShown() {
         val snackbarHostState = SnackbarHostState()
         composeTestRule.setContent {
-            SavrTheme {
+            SavrTheme() {
 
                 // When the Home screen receives data with an error
                 HomeFeedScreen(
                     uiState = HomeUiState.NoPosts(
                         isLoading = false,
                         errorMessages = listOf(ErrorMessage(0L, R.string.load_error)),
-                        searchInput = ""
+                        searchInput = "",
+                        mode = "",
+                        configured = true,
                     ),
-                    showTopAppBar = false,
-                    onToggleFavorite = {},
+//                    showTopAppBar = false,
+//                    onToggleFavorite = {},
                     onSelectPost = {},
                     onRefreshPosts = {},
                     onErrorDismiss = {},
                     homeListLazyListState = rememberLazyListState(),
                     snackbarHostState = snackbarHostState,
-                    onSearchInputChanged = {}
+//                    onSearchInputChanged = {}
+                    onChangeMode = {},
+                    onScrapeAssets = { s: String?, s1: String, function: (Int, String) -> Unit -> },
                 )
             }
         }

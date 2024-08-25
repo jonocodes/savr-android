@@ -1,12 +1,12 @@
 
-package com.digitus.savr
+package app.digitus.savr
 
 import android.content.Context
-import com.digitus.savr.data.AppContainer
-import com.digitus.savr.data.articles.ArticlesRepository
-import com.digitus.savr.data.articles.impl.BlockingFakeArticlesRepository
+import app.digitus.savr.data.AppContainer
+import app.digitus.savr.data.articles.ArticlesRepository
+import app.digitus.savr.data.articles.impl.BlockingFakeArticlesRepository
 
-class TestAppContainer(private val context: Context) : AppContainer {
+class TestAppContainer(private val context: Context) : app.digitus.savr.data.AppContainer {
 
     override val articlesRepository: ArticlesRepository by lazy {
         BlockingFakeArticlesRepository()
