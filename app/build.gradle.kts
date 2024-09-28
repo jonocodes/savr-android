@@ -7,10 +7,10 @@ plugins {
 
 android {
     compileSdk = libs.versions.compileSdk.get().toInt()
-    namespace = "com.digitus.savr"
+    namespace = "app.digitus.savr"
 
     defaultConfig {
-        applicationId = "com.digitus.savr"
+        applicationId = "app.digitus.savr"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
@@ -33,12 +33,14 @@ android {
     }
 
     buildTypes {
-        getByName("debug") {
-
+        debug {
+            isDebuggable = true
         }
 
-        getByName("release") {
+        release {
             isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = false
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),
                     "proguard-rules.pro")
@@ -70,6 +72,8 @@ android {
 
     buildFeatures {
         compose = true
+        viewBinding = true
+        buildConfig = true
     }
 
     packaging.resources {
@@ -92,6 +96,10 @@ dependencies {
     implementation(libs.androidx.preference)
     implementation(libs.material)
     implementation(libs.androidx.preference.ktx)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.navigation.fragment)
+    implementation(libs.androidx.navigation.ui.ktx)
+//    implementation(libs.androidx.ui.desktop)
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -108,9 +116,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-
-    implementation(libs.accompanist.swiperefresh)
-    implementation(libs.accompanist.systemuicontroller)
 
     implementation(libs.androidx.appcompat)
 //    implementation(libs.androidx.activity.ktx)
@@ -129,21 +134,20 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.window)
 
-
-
     implementation("androidx.webkit:webkit:1.8.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
     implementation("org.apache.commons:commons-text:1.10.0")
 
     implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.annotation:annotation:1.8.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.1")
     implementation(platform("androidx.compose:compose-bom:2023.08.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.material3)
 
     implementation("androidx.javascriptengine:javascriptengine:1.0.0-beta01")
     implementation("com.eclipsesource.j2v8:j2v8:6.2.1@aar")
@@ -152,11 +156,16 @@ dependencies {
     implementation("com.squareup.duktape:duktape-android:1.4.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
 
+    implementation("me.zhanghai.compose.preference:library:1.1.1")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 
     implementation("com.google.code.gson:gson:2.8.7")
+
+    implementation(libs.jsoup)
+    implementation(libs.okhttp.v4120)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.core)
