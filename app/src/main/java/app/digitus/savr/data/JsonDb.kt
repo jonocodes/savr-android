@@ -103,7 +103,7 @@ class JsonDb(val context: Context) {
 
         if (dbModel.saves.find { it.slug == article.slug } != null) {
             Log.d(LOGTAG, "skipping db add. article already exists: ${article.slug}")
-            throw AssertionError("Article already exists")
+            throw Exception("Article already exists")
         } else {
             dbModel.saves.add(0, article)
 

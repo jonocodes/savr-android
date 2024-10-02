@@ -1,48 +1,44 @@
 package app.digitus.savr.utils
 
+
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.util.Log
-import java.text.Normalizer
-import java.util.Locale
-
-
+import android.widget.Toast
 import androidx.documentfile.provider.DocumentFile
+import app.digitus.savr.R
 import app.digitus.savr.SavrApplication.Companion.appDataDir
 import app.digitus.savr.SavrApplication.Companion.appSavesDir
-import app.digitus.savr.R
-import app.digitus.savr.data.JsonDb
 import app.digitus.savr.model.Article
 import app.digitus.savr.model.ReadabilityResult
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import java.io.BufferedReader
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.net.URL
+import java.text.Normalizer
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
-
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
-import java.net.URL
-
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.os.Build
-import android.widget.Toast
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import java.util.Locale
 
 
 const val PREFS_FILENAME = "app.digitus.savr.prefs"
@@ -55,15 +51,15 @@ const val DEFAULT_ARTICLE_FONTSIZE_PX = 20
 const val LOGTAG = "Savr"
 
 val JS_SCRIPT_READABILITY = """
-                            let readabilityResult = new Readability(document).parse();
+    let readabilityResult = new Readability(document).parse();
 
-                            if (readabilityResult === null) {
-                              throw new Error('Readability did not parse');
-                            }
+    if (readabilityResult === null) {
+      throw new Error('Readability did not parse');
+    }
 
-                            readabilityResult
+    readabilityResult
 
-                            """.trimIndent()
+    """.trimIndent()
 
 
 class DbCreationException(message: String="") : Exception(message)
@@ -588,18 +584,25 @@ fun extractImageUrls(doc: Document, articleUrl: String): List<ImageData> {
     for (img in imgElements) {
         var imgUrl = img.attr("src")
 
-        if (!imgUrl.matches(Regex("^[a-zA-Z]+://.*"))) {
-            imgUrl = URL(URL(baseDirectory), imgUrl).toString()
+        try {
+            if (!imgUrl.matches(Regex("^[a-zA-Z]+://.*"))) {
+                imgUrl = URL(URL(baseDirectory), imgUrl).toString()
+            }
+
+            val imageFormat = determineImageFormat(imgUrl)
+
+            val pathWithoutProtocol = imgUrl.replace(Regex("^[a-zA-Z]+://"), "")
+
+            val modifiedPath = pathWithoutProtocol.replace(Regex("[^a-zA-Z0-9_]"), "_") +
+                    "." + imageFormat.name.lowercase()
+
+            imgData.add(ImageData(imgUrl, modifiedPath, img, imageFormat))
+
+        } catch (e: Exception) {
+            Log.e(LOGTAG, "Error processing image $imgUrl")
+            Log.e(LOGTAG, e.stackTraceToString())
         }
 
-        val imageFormat = determineImageFormat(imgUrl)
-
-        val pathWithoutProtocol = imgUrl.replace(Regex("^[a-zA-Z]+://"), "")
-
-        val modifiedPath = pathWithoutProtocol.replace(Regex("[^a-zA-Z0-9_]"), "_") +
-                "." + imageFormat.name.lowercase()
-
-        imgData.add(ImageData(imgUrl, modifiedPath, img, imageFormat))
     }
 
     return imgData
@@ -620,6 +623,10 @@ suspend fun downloadAndResizeImages(
     val outputDir = DocumentFile.fromTreeUri(context, outputDirUri) ?: return@withContext
 
     val imageCount = imageData.size
+
+    if (imageCount == 0)
+        return@withContext
+
     val startPercent = 30
     val endPercent = 95
     val stepSize = (endPercent - startPercent) / imageCount / 2
@@ -825,7 +832,7 @@ suspend fun scrapeReadabilityAssets(
         try {
 
             if (app.digitus.savr.data.JsonDb(context).articleInDb(article) != null)
-                throw AssertionError("Article already exists")
+                throw Exception("Article already exists")
 
             createFileText(
                 context,

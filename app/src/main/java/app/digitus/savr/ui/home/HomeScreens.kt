@@ -4,10 +4,15 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.net.http.SslError
 import android.util.Log
 import android.view.View.INVISIBLE
 import android.view.ViewGroup
+import android.webkit.SslErrorHandler
 import android.webkit.ValueCallback
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Arrangement
@@ -79,6 +84,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat.startActivity
 import app.digitus.savr.BuildConfig
 import app.digitus.savr.R
+import app.digitus.savr.data.JsonDb
 import app.digitus.savr.model.Article
 import app.digitus.savr.ui.SettingsActivity
 import app.digitus.savr.ui.components.SavrSnackbarHost
@@ -89,13 +95,19 @@ import app.digitus.savr.utils.prefsGetString
 import app.digitus.savr.utils.readFromAsset
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
+import java.io.ByteArrayInputStream
 
-val sampleArticleUrls = listOf(
+val sampleArticleUrls = setOf(
     "https://www.apalrd.net/posts/2023/network_ipv6/",
-    "https://getpocket.com/explore/item/is-matter-conscious?utm_source=pocket_shared",
+    "https://getpocket.com/explore/item/is-matter-conscious",
     "https://medium.com/androiddevelopers/jetnews-for-every-screen-4d8e7927752",
-    "https://theconversation.com/records-of-pompeiis-survivors-have-been-found-and-archaeologists-are-starting-to-understand-how-they-rebuilt-their-lives-230641?utm_source=pocket_shared",
-    "https://en.wikipedia.org/wiki/Dune:_Part_Two",
+    "https://theconversation.com/records-of-pompeiis-survivors-have-been-found-and-archaeologists-are-starting-to-understand-how-they-rebuilt-their-lives-230641",
+    "https://en.m.wikipedia.org/wiki/Dune:_Part_Two",
+    "https://lifehacker.com/home/how-to-make-more-kitchen-counter-space", // has svg
+    "http://leejo.github.io/2024/09/01/off_by_one/", // no ssl
+    "https://www.troyhunt.com/inside-the-3-billion-people-national-public-data-breach/",
+    "https://medium.com/airbnb-engineering/rethinking-text-resizing-on-web-1047b12d2881",
+    "https://leejo.github.io/2024/09/29/holding_out_for_the_heros_to_fuck_off/",
 )
 
 /**
@@ -166,7 +178,6 @@ fun HomeFeedScreen(
 //                lifecycleOwner.lifecycle.removeObserver(observer)
 //            }
 //        }
-
 
         ArticleList(
             onArticleTapped = onSelectPost,
@@ -521,11 +532,60 @@ fun ScraperWebView(
 
     val context = LocalContext.current
 
+    val excludeExtensions = setOf("css", "js", "ttf", "ico", "gif", "png", "jpeg", "jpg", "webp", "svg")
+
     val webViewClient1 = object : WebViewClient() {
+
+        override fun shouldInterceptRequest(
+            view: WebView?,
+            request: WebResourceRequest?
+        ): WebResourceResponse? {
+
+            // we really only want the html content at this step, so skip the others
+
+            Log.d(LOGTAG, "scrape load intercept ${request?.url}")
+
+            if (request?.requestHeaders?.get("Accept")?.contains("html") == true) {
+                return super.shouldInterceptRequest(view, request)
+            }
+
+            val extension = request?.url?.toString()?.substringAfterLast('.', "")?.lowercase() ?: ""
+
+            if (excludeExtensions.contains(extension)) {
+                 Log.d(LOGTAG, "skipping via extension match: $extension")
+                return WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream("".toByteArray()))
+            }
+
+//            if (request?.requestHeaders?.get("Accept")?.contains("image") == true) {
+//                Log.d(LOGTAG, "skipping image")
+//                return WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream("".toByteArray()))
+//            }
+
+            // example match here is Accept: '*/*' with no file extension
+            return super.shouldInterceptRequest(view, request)
+        }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             onProgress(20, "fetching content")
             super.onPageStarted(view, url, favicon)
+        }
+
+        override fun onReceivedError(
+            view: WebView?,
+            request: WebResourceRequest?,
+            error: WebResourceError?
+        ) {
+            Log.e(LOGTAG, "onReceivedError url ${request?.url}  ${error?.description}")
+            super.onReceivedError(view, request, error)
+        }
+
+        override fun onReceivedSslError(
+            view: WebView?,
+            handler: SslErrorHandler?,
+            error: SslError?
+        ) {
+            Log.e(LOGTAG, "onReceivedErrorSSL url ${error?.url}  ${error?.toString()}")
+            super.onReceivedSslError(view, handler, error)
         }
 
         override fun onPageFinished(view: WebView, url: String) {
@@ -632,10 +692,19 @@ fun AddArticleDialog(
     onRefreshPosts: () -> Unit,
     onScrapeAssets: (String?, String, (Int, String) -> Unit) -> Unit,
 ) {
+
     var startUrl = ""
 
-    if (BuildConfig.DEBUG)
-        startUrl = sampleArticleUrls.asSequence().shuffled().find { true } ?: error("Error picking sample")
+    if (BuildConfig.DEBUG) {
+
+        val context = LocalContext.current
+        val allArticles = JsonDb(context).getEverything()
+        val urlsInUse = allArticles.saves.map { it.url }.toSet()
+        val chooseFrom = sampleArticleUrls subtract urlsInUse
+
+        if (chooseFrom.isNotEmpty())
+            startUrl = chooseFrom.asSequence().shuffled().find { true } ?: error("Error picking sample")
+    }
 
     var urlText by rememberSaveable { mutableStateOf(startUrl) }
 

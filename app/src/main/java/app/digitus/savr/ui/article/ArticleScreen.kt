@@ -2,7 +2,6 @@
 package app.digitus.savr.ui.article
 
 import android.content.Intent
-import android.content.res.Configuration
 import android.net.Uri
 import android.util.Log
 import android.view.View.VISIBLE
@@ -116,7 +115,12 @@ fun DisplayWebView(article: Article) {
                 appSavesDir?.findFile(uri.host + uri.path)
                 val saveDir = appSavesDir?.findFile(uri.host.toString())
                 val images = saveDir?.findFile("images")
-                val image = images?.findFile(uri.pathSegments.last()) ?: error("Can not find image for ${uri.path}")
+                val image = images?.findFile(uri.pathSegments.last()) //?: error("Can not find image for ${uri.path}")
+
+                if (image == null) {
+                    Log.e(LOGTAG,"Can not find image for ${uri.path}")
+                    return null
+                }
 
                 Log.d(LOGTAG, "Intercept and load image: ${image.name}")
 
