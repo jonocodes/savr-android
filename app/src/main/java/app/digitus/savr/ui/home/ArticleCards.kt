@@ -34,12 +34,12 @@ import androidx.compose.ui.unit.dp
 import app.digitus.savr.R
 import app.digitus.savr.data.articles.impl.article1
 import app.digitus.savr.model.Article
+import app.digitus.savr.ui.theme.SavrTheme
 import app.digitus.savr.utils.archiveArticle
 import app.digitus.savr.utils.deleteArticle
+import app.digitus.savr.utils.getThumbnail
 import app.digitus.savr.utils.shareArticle
 import app.digitus.savr.utils.unarchiveArticle
-import app.digitus.savr.ui.theme.SavrTheme
-import app.digitus.savr.utils.getThumbnail
 
 @Composable
 fun AuthorAndReadTime(
@@ -63,7 +63,7 @@ fun ArticleImage(article: Article, modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     val bitmap = getThumbnail(context, article)
-    var painter = painterResource(R.drawable.post_6_thumb)
+    var painter = painterResource(R.drawable.generic_article_bw)
 
     if (bitmap != null) {
         val imageBitmap: ImageBitmap = remember(article.slug) {

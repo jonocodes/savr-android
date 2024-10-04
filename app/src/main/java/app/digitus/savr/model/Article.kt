@@ -37,7 +37,7 @@ data class Article(
 
     fun publishedDateReadable(): String? {
 
-//        TODO: make this nicer to read like November 20, 2004, but localized
+//        TODO: make this nicer to read like "November 20, 2004", but localized
 
         if (publishedDate == null) {
             return null

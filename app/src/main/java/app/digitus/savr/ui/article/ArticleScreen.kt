@@ -149,25 +149,6 @@ fun DisplayWebView(article: Article) {
                 run {
                     Log.d(LOGTAG, "done loading displayHelpers.js")
                     Log.d(LOGTAG, result)
-
-//                    when (context.resources?.configuration?.uiMode?.and(Configuration.UI_MODE_NIGHT_MASK)) {
-//                        Configuration.UI_MODE_NIGHT_YES -> {
-//
-//                            view.evaluateJavascript("darkMode()") { result ->
-//                                run {
-//                                    Log.d(LOGTAG, "article dark mode")
-//                                    Log.d(LOGTAG, result)
-//                                }
-//                            }
-//
-//                        }
-//                        Configuration.UI_MODE_NIGHT_NO -> {}
-//                        Configuration.UI_MODE_NIGHT_UNDEFINED -> {}
-//                    }
-
-//                    val fontMod = prefsGetInt(context, PREFS_KEY_FONT_SIZE_MODIFIER)
-//                    fontSizeModify(fontMod)
-
                 }
             }
         }
@@ -317,8 +298,6 @@ private fun ArticleTopAppBar(
                 )
             }
             IconButton(onClick = {
-//                increaseText()
-
                 val fontMod = prefsGetInt(context, PREFS_KEY_FONT_SIZE_MODIFIER)
                 prefsStoreInt(context, PREFS_KEY_FONT_SIZE_MODIFIER, fontMod + 3)
                 fontSizeModify( 3)
@@ -329,8 +308,6 @@ private fun ArticleTopAppBar(
                 )
             }
             IconButton(onClick = {
-//                decreaseText()
-
                 val fontMod = prefsGetInt(context, PREFS_KEY_FONT_SIZE_MODIFIER)
                 prefsStoreInt(context, PREFS_KEY_FONT_SIZE_MODIFIER, fontMod - 3)
                 fontSizeModify(- 3)
@@ -439,32 +416,11 @@ fun fontSizeModify(amount: Int) {
     }
 }
 
-//fun increaseText() {
-//    pageWebView?.evaluateJavascript("bigger()") { result ->
-//        run {
-//            Log.d(LOGTAG, "done doing bigger text")
-//            Log.d(LOGTAG, result)
-//        }
-//    }
-//}
-//
-//fun decreaseText() {
-//    pageWebView?.evaluateJavascript("smaller()") { result ->
-//        run {
-//            Log.d(LOGTAG, "done doing smaller text")
-//            Log.d(LOGTAG, result)
-//        }
-//    }
-//}
-
 
 @Preview("Article screen navrail", device = Devices.NEXUS_7_2013)
 @Composable
 fun MyPreview() {
     SavrTheme() {
-//        val article = runBlocking {
-//            (BlockingFakeArticlesRepository().getArticle("first-slug") as Result.Success).data
-//        }
         ArticleInfoDialog(article1, {})
     }
 }
@@ -474,9 +430,6 @@ fun MyPreview() {
 @Composable
 fun MyArticleInfo() {
     SavrTheme() {
-//        val article = runBlocking {
-//            (BlockingFakeArticlesRepository().getArticle("first-slug") as Result.Success).data
-//        }
         ArticleScreen(article1, {})
     }
 }

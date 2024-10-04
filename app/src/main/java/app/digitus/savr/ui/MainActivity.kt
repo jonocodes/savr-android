@@ -28,17 +28,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setDirectories(applicationContext)
-//        if (appDataDir == null) {
-//            Toast.makeText(
-//                applicationContext,
-//                "Data directory not set. Please choose one in preferences.",
-//                Toast.LENGTH_SHORT
-//            ).show()
-//        }
 
         Log.i(LOGTAG, "INTENT ${intent}")
 
-//        val preferences = this.getSharedPreferences(PREFS_FILENAME, 0)
         val preferences = PreferenceManager.getDefaultSharedPreferences(this)
         preferences.registerOnSharedPreferenceChangeListener(listener)
 
@@ -92,9 +84,4 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-//    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-//        val inflater: MenuInflater = menuInflater
-////        inflater.inflate(R.menu.game_menu, menu)
-//        return true
-//    }
 }

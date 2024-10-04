@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -99,13 +100,6 @@ fun prefsStoreInt(context: Context, key: String, value: Int) {
     editor.apply()
 }
 
-//fun prefsGetString() {
-//    val preferences = PreferenceManager.getDefaultSharedPreferences(context).all
-//
-//    preferences.forEach {
-//        Log.d("Preferences", "${it.key} -> ${it.value}")
-//    }
-//}
 
 fun getChosenTheme(context: Context): String {
     return prefsGetString(context, PREFS_KEY_THEME) ?: "Follow system"
@@ -119,13 +113,6 @@ fun prefsGetString(context: Context, key: String): String? {
 fun prefsGetInt(context: Context, key: String): Int {
     return context.getSharedPreferences(PREFS_FILENAME, 0).getInt(key, 0)
 }
-
-//
-//fun prefsGetString(context: Context, key: String, def: String): String? {
-//    val text = context.getSharedPreferences(PREFS_FILENAME, 0).getString(key, def)
-//    return text
-//}
-
 
 fun arePermissionsGranted(context: Context, uriString: String): Boolean {
     // list of all persisted permissions for our app
@@ -182,47 +169,12 @@ fun setDirectories(context: Context) {
 
 }
 
-//fun chooseUri(context: Context, treeUri: Uri) {
-//
-//    Log.i(LOGTAG, "giving access to URI: ${treeUri.toString()}")
-//    // here we should do some checks on the uri, we do not want root uri
-//    // because it will not work on Android 11, or perhaps we have some specific
-//    // folder name that we want, etc
-//    if (Uri.decode(treeUri.toString()).endsWith(":")) {
-//        Toast.makeText(context, "Cannot use root folder!", Toast.LENGTH_SHORT).show()
-//        // consider asking user to select another folder
-//        return
-//    }
-//    // here we ask the content resolver to persist the permission for us
-//    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-//            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-//    context.contentResolver.takePersistableUriPermission(
-//        treeUri,
-//        takeFlags
-//    )
-//
-//    // we should store the string fo further use
-//    prefsStoreString(context, DATA_DIR_URI, treeUri.toString())
-//
-//
-//    val dir = DocumentFile.fromTreeUri(context, treeUri)
-//    if (dir != null) {
-//        var files = dir.listFiles()
-//        Log.d(LOGTAG, files.map { it.name }.toString())
-//    }
-//
-//    setDirectories(context)
-//
-//}
-
 
 
 fun createFileText(context: Context, filename: String, content: String, slug: String, mimeType: String ="*/html"): Boolean {
 
     if (appSavesDir == null) {
         throw AssertionError("Error accessing saves directory")
-//        Toast.makeText(context,"Error creating directory",Toast.LENGTH_SHORT).show()
-//        return
     }
 
     var articleDir = appSavesDir?.findFile(slug)
@@ -232,8 +184,6 @@ fun createFileText(context: Context, filename: String, content: String, slug: St
 
         if (articleDir == null) {
             throw AssertionError("Error creating article directory")
-//            Toast.makeText(context,"Error creating directory",Toast.LENGTH_SHORT).show()
-//            return
         }
         Log.i(LOGTAG, "created article dir: ${articleDir.name}")
     }
@@ -261,14 +211,6 @@ fun createFileText(context: Context, filename: String, content: String, slug: St
     return true
 
 }
-
-//    private fun releasePermissions(uri: Uri) {
-//        val flags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-//                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-//        contentResolver.releasePersistableUriPermission(uri,flags)
-//        //we should remove this uri from our shared prefs, so we can start over again next time
-//        prefsStoreString(DATA_DIR_URI, "")
-//    }
 
 
 //Just a test function to write something into a file, from https://developer.android.com
@@ -401,8 +343,6 @@ fun formatHtmlForLocal(article: Article, html: String?): String {
 
 
 fun formatHtmlAndroid(article: Article, html: String?, fontSize: Int, theme: String = "light"): String {
-
-//    TODO: set fontsize here so the rendering does not jump
 
     return """
       <!DOCTYPE html>
@@ -743,7 +683,7 @@ fun createThumbnail(
     val outputFile = outputDir.createFile("image/webp", "thumbnail.webp")
 
     val originalBitmap = BitmapFactory.decodeStream(inputStream)
-    val resizedBitmap = resizeBitmap(originalBitmap, maxDimensionThumb, maxDimensionThumb)
+    val resizedBitmap = resizeBitmapSquare(originalBitmap, maxDimensionThumb)
 
     outputFile?.uri?.let { uri ->
         val contentResolver = context.contentResolver.openOutputStream(uri)?.use { outStream ->
@@ -776,6 +716,28 @@ fun resizeBitmap(image: Bitmap, maxWidth: Int, maxHeight: Int): Bitmap {
     val newHeight = (height * scale).toInt()
 
     return Bitmap.createScaledBitmap(image, newWidth, newHeight, true)
+}
+
+fun resizeBitmapSquare(bitmap: Bitmap, size: Int): Bitmap {
+    val width = bitmap.width
+    val height = bitmap.height
+
+    // Calculate the scale factor to maintain aspect ratio and fit into the square size
+    val scale = size.toFloat() / minOf(width, height)
+
+    // Create a matrix for the scaling
+    val matrix = Matrix().apply {
+        setScale(scale, scale)
+    }
+
+    // Resize the bitmap using the scale matrix
+    val scaledBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true)
+
+    // Crop the scaled bitmap to ensure it's a square of the desired size
+    val xOffset = (scaledBitmap.width - size) / 2
+    val yOffset = (scaledBitmap.height - size) / 2
+
+    return Bitmap.createBitmap(scaledBitmap, xOffset, yOffset, size, size)
 }
 
 fun updateImageSrc(doc: Document, imageData: List<ImageData>, outputDir: Uri) {

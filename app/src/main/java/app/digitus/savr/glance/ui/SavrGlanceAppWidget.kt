@@ -28,7 +28,6 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import app.digitus.savr.SavrApplication
 import app.digitus.savr.R
 import app.digitus.savr.data.successOr
 import app.digitus.savr.model.Post
@@ -112,7 +111,7 @@ class SavrGlanceAppWidget : GlanceAppWidget() {
         ) {
             val context = LocalContext.current
             Image(
-                provider = ImageProvider(R.drawable.ic_jetnews_logo),
+                provider = ImageProvider(R.drawable.icon_article_background),
                 colorFilter = ColorFilter.tint(GlanceTheme.colors.primary),
                 contentDescription = null,
                 modifier = GlanceModifier.size(24.dp)
@@ -121,7 +120,7 @@ class SavrGlanceAppWidget : GlanceAppWidget() {
             Image(
                 contentDescription = context.getString(R.string.app_name),
                 colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
-                provider = ImageProvider(R.drawable.ic_jetnews_wordmark)
+                provider = ImageProvider(R.drawable.icon_article_background)
             )
         }
     }

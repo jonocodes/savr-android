@@ -556,11 +556,6 @@ fun ScraperWebView(
                 return WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream("".toByteArray()))
             }
 
-//            if (request?.requestHeaders?.get("Accept")?.contains("image") == true) {
-//                Log.d(LOGTAG, "skipping image")
-//                return WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream("".toByteArray()))
-//            }
-
             // example match here is Accept: '*/*' with no file extension
             return super.shouldInterceptRequest(view, request)
         }

@@ -14,7 +14,6 @@ import app.digitus.savr.utils.LOGTAG
 
 class ArticleActivity : AppCompatActivity() {
 
-//    private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityArticleBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {

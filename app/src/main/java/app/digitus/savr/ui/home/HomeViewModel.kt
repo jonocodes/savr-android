@@ -144,13 +144,6 @@ class HomeViewModel(
 
     init {
         refreshArticles()
-
-        // Observe for favorite changes in the repo layer
-//        viewModelScope.launch {
-//            postsRepository.observeFavorites().collect { favorites ->
-//                viewModelState.update { it.copy(favorites = favorites) }
-//            }
-//        }
     }
 
     fun refreshArticles() {
@@ -191,7 +184,6 @@ class HomeViewModel(
                                 isLoading = false)
                         }
                     }
-//                    it.copy(configured = true)
                 }
 
             } catch (_: DbCreationException) {
@@ -205,18 +197,13 @@ class HomeViewModel(
     }
 
     fun viewScrapeReadabilityAssets(
-//        context: Context,
-//        result: String.Companion,
         result: String?,
         url: String,
         onProgress: (Int, String) -> Unit
-
-//        viewScrapeReadabilityAssets: (String?, String) -> Unit
     ) {
 
         viewModelScope.launch {
             scrapeReadabilityAssets(
-//                context = context,
                 context = app.digitus.savr.SavrApplication.appContext ?: error("App context is empty"),
                 url = url,
                 onProgress = onProgress,
@@ -240,8 +227,6 @@ class HomeViewModel(
                 selectedArticleSlug = postId,
             )
         }
-        // Treat selecting a detail as simply interacting with it
-//        interactedWithArticleDetails(postId)
     }
 
     fun errorShown(errorId: Long) {
