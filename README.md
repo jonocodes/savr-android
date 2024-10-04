@@ -6,7 +6,7 @@ This repository is for the android app.
 
 ![screenshot](./screenshots/screenshots.png)
 
-## Features
+# Features
 
 - Save articles for reading later
 - Remove distractions like advertisements
@@ -16,7 +16,7 @@ This repository is for the android app.
 - Scraped content works well outside the app (plain html and images)
 - Plays well with file synchronization across devices. Just BYOB (bring your own backend).
 
-## Use
+# Use
 
 When reading an article in a browser, share it to Savr. Then open Savr later to read it.
 
@@ -24,7 +24,7 @@ If you want to synchronize your articles for backup or for use across devices, j
 
 Use something like [Nextcloud](https://nextcloud.com/) for a centralized option or [Syncthing](https://syncthing.net/) for a decentralized one. Or use a third party service like Google Drive.
 
-## Current state of development
+# Current state of development
 
 Basic features have been implemented (scraping, viewing, sharing, archiving, dark theme), but I would consider this in alpha. It still has a bunch of rough edges and needs work on features, bugs, and styling.
 
@@ -43,9 +43,9 @@ Build and debug using Andoid Studio.
 
 More details TBD...
 
-## FAQ
+# FAQ
 
-### Why another read-it-later app?
+## Why another read-it-later app?
 
 I consider myself a self-hosting enthusiast, who does not like to self-host :smile:. I love open source and open formats, but I dont think every single purpose app should require a custom backend for it.
 
@@ -58,7 +58,7 @@ Of course you can bring in a sync service if you want, but its up to you how you
 Generally, **I would like more apps that exist in this space**. Like:
 calendar, contacts, bookmark manager, and yes another todo app.
 
-### Why not use an existing open source project?
+## Why not use an existing open source project?
 
 There are some great projects like [Wallabag](https://wallabag.org/) and [Omnivore](https://github.com/omnivore-app/omnivore), but they require centralized hosting. Doing away with the server lets you not have to worry about:
 
@@ -72,10 +72,10 @@ There are some great projects like [Wallabag](https://wallabag.org/) and [Omnivo
 - authorization
 - all the other things that come with system administration
 
-### Is there a iOS app?
+## Is there a iOS app?
 
 We need to figure out how to deal with the filesystem restrictions. Possibly use OS-provided storage providers a la [keepassium](https://github.com/keepassium/KeePassium#automatic-sync).
 
-### Is there a desktop app?
+## Is there a desktop app?
 
 A web app, API, and desktop app are in the works.

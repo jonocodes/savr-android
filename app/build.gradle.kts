@@ -148,11 +148,11 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation(libs.androidx.material3)
 
-    implementation("androidx.javascriptengine:javascriptengine:1.0.0-beta01")
-    implementation("com.eclipsesource.j2v8:j2v8:6.2.1@aar")
+//    implementation("androidx.javascriptengine:javascriptengine:1.0.0-beta01")
+//    implementation("com.eclipsesource.j2v8:j2v8:6.2.1@aar")
     implementation("app.cash.zipline:zipline-android:1.7.0")
-    implementation("com.caoccao.javet:javet-android:3.0.2")
-    implementation("com.squareup.duktape:duktape-android:1.4.0")
+//    implementation("com.caoccao.javet:javet-android:3.0.2")
+//    implementation("com.squareup.duktape:duktape-android:1.4.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
 
     implementation("me.zhanghai.compose.preference:library:1.1.1")
